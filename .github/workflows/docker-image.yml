@@ -10,26 +10,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout Code
       - uses: actions/checkout@v4
 
-      # Buildx für erweiterte Docker Builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Login bei Docker Hub mit Secrets aus GitHub
+      # Fail fast wenn Secrets fehlen (ohne Token zu leaken)
+      - name: Validate secrets are present
+        env:
+          DH_USER: ${{ secrets.USER }}
+          DH_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          [ -z "$DH_USER" ] && echo "Missing secret: USER" && exit 1 || true
+          [ -z "$DH_TOKEN" ] && echo "Missing secret: TOKEN" && exit 1 || true
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
+          registry: docker.io
           username: ${{ secrets.USER }}
           password: ${{ secrets.TOKEN }}
-          registry: docker.io
 
-      # Build und Push des Docker-Images
+      # Sichtbarer Check: zeigt 'Username:' wenn Login wirklich aktiv ist
+      - name: Verify Docker login
+        run: docker info | grep -i '^ Username' || (echo "Not logged in"; exit 1)
+
       - name: Build and push container to Docker Hub
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
+          # Docker Hub verlangt lowercase Namespace
           tags: petuter/huggingface-fastapi:latest
