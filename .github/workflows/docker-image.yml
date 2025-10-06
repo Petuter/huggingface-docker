@@ -3,29 +3,33 @@ name: Docker Image CI
 on:
   push:
     branches: [ "main" ]
-
   workflow_dispatch:
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      # Checkout Code
+      - uses: actions/checkout@v4
 
-    - name: Authenticate to Docker hub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.USER }}
-        password: ${{ secrets.TOKEN }}
+      # Buildx für erweiterte Docker Builds
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: build and push container to Docker Hub
-      uses: docker/build-push-action@v2
-      with:
-        context: ./
-        file: ./Dockerfile
-        push: true
-        tags: Petuter/huggingface-fastapi:latest
+      # Login bei Docker Hub mit Secrets aus GitHub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.USER }}
+          password: ${{ secrets.TOKEN }}
+          registry: docker.io
 
+      # Build und Push des Docker-Images
+      - name: Build and push container to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: petuter/huggingface-fastapi:latest
